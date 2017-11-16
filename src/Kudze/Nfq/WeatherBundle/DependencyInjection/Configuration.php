@@ -18,11 +18,61 @@ class Configuration implements ConfigurationInterface
     public function getConfigTreeBuilder()
     {
         $treeBuilder = new TreeBuilder();
-        $rootNode = $treeBuilder->root('nfq_weather');
+        $rootNode = $treeBuilder->root('nfq_weather')
+            ->children()
 
-        // Here you should define the parameters that are allowed to
-        // configure your bundle. See the documentation linked above for
-        // more information on that topic.
+                ->enumNode('provider')
+                    ->values(array('yahoo', 'openweathermap', 'delegating', 'cached'))
+                    ->isRequired()
+                    ->cannotBeEmpty()
+                ->end()
+
+                ->arrayNode('providers')
+                    ->isRequired()
+                    ->cannotBeEmpty()
+                    ->children()
+
+                        ->arrayNode('yahoo')
+                            ->children()
+                                ->scalarNode('api_key')
+                                    ->defaultValue('')
+                                ->end()
+                            ->end()
+                        ->end()
+
+                        ->arrayNode('openweathermap')
+                            ->children()
+                                ->scalarNode('api_key')
+                                    ->defaultValue('')
+                                ->end()
+                            ->end()
+                        ->end()
+
+                        ->arrayNode('delegating')
+                            ->children()
+                                ->arrayNode('providers')
+                                    ->enumPrototype()
+                                        ->values(array('yahoo', 'openweathermap')) //To put cached here doesnt make any sense
+                                    ->end()
+                                ->end()
+                            ->end()
+                        ->end()
+
+                        ->arrayNode('cached')
+                            ->children()
+                                ->enumNode('provider')
+                                    ->values(array('yahoo', 'openweathermap', 'delegating'))
+                                ->end()
+
+                                ->integerNode('ttl')
+                                    ->min(1)
+                                ->end()
+                            ->end()
+                        ->end()
+
+                    ->end()
+                ->end()
+            ->end();
 
         return $treeBuilder;
     }
