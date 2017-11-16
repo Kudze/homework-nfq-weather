@@ -5,7 +5,7 @@
     "autoload": {
         "psr-4": {
             "AppBundle\\": "src/AppBundle",
-            "NfqWeatherBundle\\": "src/Kudze/Nfq/WeatherBundle"
+            "Kudze\\": "src/Kudze"
         },
         "classmap": [
             "app/AppKernel.php",
