@@ -74,7 +74,7 @@ nfq_weather:
         yahoo:
             api_key: xd
         openweathermap:
-            api_key: xd
+            api_key: 37a8e601ce341c40d9f49cbf001eef9c
         delegating:
             providers:
                 - yahoo

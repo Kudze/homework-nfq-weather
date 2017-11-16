@@ -2,15 +2,10 @@
 
 namespace Kudze\Nfq\WeatherBundle\DependencyInjection;
 
-use Kudze\Nfq\WeatherBundle\Core\Provider\CachedWeatherProvider;
-use Kudze\Nfq\WeatherBundle\Core\Provider\DelegatingWeatherProvider;
-use Kudze\Nfq\WeatherBundle\Core\Provider\IWeatherProvider;
-use Kudze\Nfq\WeatherBundle\Core\Provider\OpenWeatherMapWeatherProvider;
-use Kudze\Nfq\WeatherBundle\Core\Provider\YahooWeatherProvider;
-use Symfony\Component\Cache\Adapter\FilesystemAdapter;
 use Symfony\Component\Config\Definition\Exception\Exception;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\Config\FileLocator;
+use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 use Symfony\Component\DependencyInjection\Loader;
 
@@ -26,20 +21,24 @@ class NfqWeatherExtension extends Extension
      */
     public function load(array $configs, ContainerBuilder $container)
     {
+
+        //Services
         $loader = new Loader\XmlFileLoader(
             $container,
             new FileLocator(__DIR__ . '/../Resources/config')
         );
         $loader->load('services.xml');
 
+        //Config
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
 
-        $provider = $this->loadProvider($config['provider'], $config, $container);
-        $container->set("nfq_weather.provider", $provider);
+        //Config intervention with services.
+        $name = $this->loadProvider($config['provider'], $config, $container);
+        $container->setDefinition('nfq_weather.provider', $container->getDefinition($name));
     }
 
-    private function loadProvider(string $name, array $config, ContainerBuilder $container) : IWeatherProvider
+    private function loadProvider(string $name, array $config, ContainerBuilder $container) : string
     {
 
         //Before we do anything lets make sure that its even configured under providers.
@@ -55,10 +54,9 @@ class NfqWeatherExtension extends Extension
                 if(!array_key_exists('api_key', $providerConfig))
                     throw new Exception('api_key is not configured under nfq_weather.providers.' . $name);
 
-                $provider = new YahooWeatherProvider();
-                $container->set('nfq_weather.provider_yahoo', $provider);
+                $def = $container->getDefinition('nfq_weather.yahoo_provider');
 
-                return $provider;
+                return 'nfq_weather.yahoo_provider';
 
             case 'openweathermap':
 
@@ -66,10 +64,10 @@ class NfqWeatherExtension extends Extension
                 if(!array_key_exists('api_key', $providerConfig))
                     throw new Exception('api_key is not configured under nfq_weather.providers.' . $name);
 
-                $provider = new OpenWeatherMapWeatherProvider($providerConfig['api_key']);
-                $container->set('nfq_weather.provider_openweathermap', $provider);
+                $def = $container->getDefinition('nfq_weather.openweathermap_provider');
+                $def->replaceArgument(0, $providerConfig['api_key']);
 
-                return $provider;
+                return 'nfq_weather.openweathermap_provider';
 
             case 'delegating':
 
@@ -80,14 +78,17 @@ class NfqWeatherExtension extends Extension
                     throw new Exception('providers under nfq_weather.providers' . $name . ' is empty!');
 
                 //Now we will interpret other providers
-                $providers = array();
-                foreach($providerConfig['providers'] as $val)
-                    array_push($providers, $this->loadProvider($val, $config, $container));
+                $references = array();
+                foreach($providerConfig['providers'] as $val) {
+                    $name = $this->loadProvider($val, $config, $container);
 
-                $provider = new DelegatingWeatherProvider($providers);
-                $container->set('nfq_weather.provider_delegating', $provider);
+                    array_push($references, new Reference($name));
+                }
 
-                return $provider;
+                $def = $container->getDefinition('nfq_weather.delegating_provider');
+                $def->setArgument(0, $references);
+
+                return 'nfq_weather.delegating_provider';
 
             case 'cached':
 
@@ -97,15 +98,12 @@ class NfqWeatherExtension extends Extension
                 if(!array_key_exists('ttl', $providerConfig))
                     throw new Exception('ttl is not configured under nfq_weather.providers.' . $name);
 
-                $provider2 = $this->loadProvider($providerConfig['provider'], $config, $container);
+                $name = $this->loadProvider($providerConfig['provider'], $config, $container);
+                $def = $container->getDefinition('nfq_weather.cached_provider');
+                $def->setArgument(0, new Reference($name));
+                $def->setArgument(1, new Reference('nfq_weather.cache'));
 
-                //Not really sure where to put this so for now this can stay here.
-                $cache = new FilesystemAdapter();
-
-                $provider = new CachedWeatherProvider($provider2, $cache);
-                $container->set('nfq_weather.provider_cached', $provider);
-
-                return $provider;
+                return 'nfq_weather.cached_provider';
 
         }
 
