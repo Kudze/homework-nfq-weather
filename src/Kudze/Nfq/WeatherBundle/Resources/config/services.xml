@@ -28,6 +28,7 @@
         <service id="nfq_weather.delegating_provider"
                  class="Kudze\Nfq\WeatherBundle\Core\Provider\DelegatingWeatherProvider">
             <argument></argument>
+            <argument type="service" id="logger"></argument>
         </service>
 
         <service id="nfq_weather.cached_provider"

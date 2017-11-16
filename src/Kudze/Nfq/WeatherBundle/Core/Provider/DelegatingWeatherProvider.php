@@ -11,15 +11,18 @@ namespace Kudze\Nfq\WeatherBundle\Core\Provider;
 
 use Kudze\Nfq\WeatherBundle\Core\Location;
 use Kudze\Nfq\WeatherBundle\Core\Weather;
+use Psr\Log\LoggerInterface;
 
 class DelegatingWeatherProvider implements IWeatherProvider
 {
 
     private $weatherProviders;
+    private $logger;
 
-    public function __construct(array $weatherProvider) {
+    public function __construct(array $weatherProvider, LoggerInterface $logger) {
 
         $this->weatherProviders = $weatherProvider;
+        $this->logger = $logger;
 
     }
 
@@ -39,7 +42,7 @@ class DelegatingWeatherProvider implements IWeatherProvider
 
             catch(WeatherProviderException $e) {
 
-                printf('Weather Provider failed to fetch result, reason: %s' . "\n", $e->getMessage());
+                $this->logger->notice('Weather Provider failed to fetch result, reason:' . $e->getMessage());
 
                 continue;
 
@@ -48,5 +51,13 @@ class DelegatingWeatherProvider implements IWeatherProvider
         }
 
         throw new WeatherProviderException("All provided weather providers failed to fetch results.");
+    }
+
+    public function getProviders() : array {
+        return $this->weatherProviders;
+    }
+
+    public function getLogger() : LoggerInterface {
+        return $this->logger;
     }
 }
