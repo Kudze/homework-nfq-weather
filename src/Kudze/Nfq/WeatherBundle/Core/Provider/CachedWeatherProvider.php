@@ -17,12 +17,14 @@ class CachedWeatherProvider implements IWeatherProvider
 {
 
     private $provider;
+    private $ttl;
     private $cacheItemPool;
     private $cachePrefix;
 
-    public function __construct(IWeatherProvider $provider, CacheItemPoolInterface $cacheItemPool, string $cachePrefix = 'nfq.weather')
+    public function __construct(IWeatherProvider $provider, int $ttl, CacheItemPoolInterface $cacheItemPool, string $cachePrefix = 'nfq.weather')
     {
         $this->provider = $provider;
+        $this->ttl = $ttl;
         $this->cacheItemPool = $cacheItemPool;
         $this->cachePrefix = $cachePrefix;
     }
@@ -44,7 +46,7 @@ class CachedWeatherProvider implements IWeatherProvider
 
             //OpenWeatherMap suggests 10 minute delay. So lets use it.
             $currCacheItem->set($weather);
-            $currCacheItem->expiresAfter(600);
+            $currCacheItem->expiresAfter($this->ttl);
             $this->cacheItemPool->save($currCacheItem);
 
         }
@@ -66,6 +68,11 @@ class CachedWeatherProvider implements IWeatherProvider
     public function getWeatherProvider() : IWeatherProvider
     {
         return $this->provider;
+    }
+
+    public function getTimeToLive() : int
+    {
+        return $this->ttl;
     }
 
     public function getCacheItemPool() : CacheItemPoolInterface

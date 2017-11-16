@@ -101,7 +101,8 @@ class NfqWeatherExtension extends Extension
                 $name = $this->loadProvider($providerConfig['provider'], $config, $container);
                 $def = $container->getDefinition('nfq_weather.cached_provider');
                 $def->setArgument(0, new Reference($name));
-                $def->setArgument(1, new Reference('nfq_weather.cache'));
+                $def->setArgument(1, $providerConfig['ttl']);
+                $def->setArgument(2, new Reference('nfq_weather.cache'));
 
                 return 'nfq_weather.cached_provider';
 
